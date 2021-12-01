@@ -21,3 +21,4 @@ numberIncreases :: (Int, Int) -> Int
 numberIncreases (a, b)
  | b > a     = 1
  | otherwise = 0
+
