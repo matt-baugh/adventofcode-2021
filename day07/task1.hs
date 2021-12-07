@@ -26,20 +26,15 @@ splitOn delimiter str =
 
 solve :: [Int] -> Int
 solve xs
-  = sum $ breedFish (countFish xs) 256
-
-
-breedFish :: [Int] -> Int -> [Int]
-breedFish xs@(y:ys) i
-  | i == 0    = xs
-  | otherwise = breedFish ((addToElem ys 6 y) ++ [y]) $ i - 1
-
-
-countFish :: [Int] -> [Int]
-countFish xs
-  = foldl (\cs i-> addToElem cs i 1) initCounts xs
+  = foldl (\m x -> min m $ calcCost xs x) (calcCost xs mn) [mn+1..mx]
   where
-    initCounts = replicate 9 0
+    mn = minimum xs
+    mx = maximum xs 
+
+
+calcCost :: [Int] -> Int -> Int
+calcCost xs x
+  = sum $ map (abs . (x-)) xs
 
 
 splitBetween :: Int -> Int -> [a] -> ([a], [a], [a])
@@ -57,6 +52,6 @@ addToElem xs i c
     (xs', x:xs'') = splitAt i xs
 
 testInput :: String
-testInput = "3,4,3,1,2" 
+testInput = "16,1,2,0,4,2,7,1,2,14" 
 
 testData = convert testInput
