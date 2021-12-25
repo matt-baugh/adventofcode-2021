@@ -1,0 +1,16 @@
+A . x = b
+
+A @ X^T = B^T
+
+A = a b c d
+    e f g h
+    i j k l
+    0 0 0 1
+
+X = x1 y1 z1 1
+    x2 y2 z2 1
+    . . . .
+    . . . .
+
+A @ X^T @ X = B^T @ X
+A = (B^T @ X) @ (X^T @ X)^-1
