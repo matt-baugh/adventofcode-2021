@@ -10,63 +10,82 @@ realResult = do
         return $ (solve . convert) allContents
 
 
-convert :: String -> (Int, Int)
+convert :: String -> [(Int, Box)]
 convert xs
-  = (p1, p2)
+  = map readCommand $ lines xs
   where
-    [p1, p2] = map (read . last . words) $ lines xs
+    readCommand :: String -> (Int, Box)
+    readCommand c
+      | val == "on"  = (1, (xr, yr, zr))
+      | val == "off" = (0, (xr, yr, zr))
+      where
+        [val, rsStrs] = words c
+        [xr, yr, zr]  = map (toRange . (drop 2)) $ splitOn ',' rsStrs
 
 
-solve :: (Int, Int) -> Int
-solve (p1Start, p2Start)
-  = max p1C p2C
+solve :: [(Int, Box)] -> Int
+solve xs
+  = sum $ map (\(xr, yr, zr) -> product $ map rangeLen [xr, yr, zr]) finalCubes
   where
-    (_, (p1C, p2C)) = playFrom [] ((p1Start, 0), (p2Start, 0), True)
+    finalCubes = foldl setCubes [] xs
+    rangeLen :: (Int, Int) -> Int
+    rangeLen (lb, ub)
+      = ub - lb + 1
 
 
-type GameState = ((Int, Int), (Int, Int), Bool)
-
-
-gameOver :: GameState -> Bool
-gameOver ((_, s1), (_, s2), _)
-  = s1 > 20 || s2 > 20
-
-
-playFromMemo :: [(GameState, (Int, Int))] -> GameState -> ([(GameState, (Int, Int))], (Int, Int))
-playFromMemo resRec gs@((_, s1), (_, s2), _)
-  | isJust mRes = (resRec, fromJust mRes)
-  | gameOver gs = ((gs, res) : resRec, res)
-  | otherwise   = ((gs, res') : resRec', res')
+setCubes :: [Box] -> (Int, Box) -> [Box]
+setCubes bs (v, b)
+  | v == 0 = concatMap (`subtractBox` b) bs
+  | v == 1 = excess ++ bs
   where
-    mRes            = lookup gs resRec
-    res             = if s1 > s2 then (1, 0) else (0, 1)
-    (resRec', res') = playFrom resRec gs
+    excess = foldl (\curr b' -> concatMap (`subtractBox` b') curr) [b] bs
 
 
-playFrom :: [(GameState, (Int, Int))] -> GameState -> ([(GameState, (Int, Int))], (Int, Int))
-playFrom resRec state
-  = (resRec'', foldl (\(acc1, acc2) ((s1, s2), c) -> (acc1 + c * s1, acc2 + c * s2)) (0, 0) $ zip possRes rollCounts)
+type Box = ((Int, Int), (Int, Int), (Int, Int))
+
+
+-- subtract b1 from b2
+subtractBox :: Box -> Box -> [Box]
+subtractBox b1@(xr@(xl, xu), yr@(yl, yu), zr@(zl, zu)) b2@(xr', yr', zr')
+  | not $ boxesOverlap b1 b2 = [b1]
+  | overlap == b1            = []
+  | otherwise                = filter validBox $ res1 ++ res2 ++ res3
   where
-    (resRec'', possRes) = mapAccumL (\resRec' r -> playFromMemo resRec' (playRoll state r)) resRec possRolls
+    overlap = (rangeIntersect xr xr', rangeIntersect yr yr', rangeIntersect zr zr')
+    (oxr@(oxl, oxu), oyr@(oyl, oyu), ozr@(ozl, ozu)) = overlap
+    (bzr, azr) = outerRanges zr ozr
+    res1       = [(xr, yr, bzr), (xr, yr, azr)]
+    (byr, ayr) = outerRanges yr oyr
+    res2       = [(xr, byr, ozr), (xr, ayr, ozr)]
+    (bxr, axr) = outerRanges xr oxr
+    res3       = [(bxr, oyr, ozr), (axr, oyr, ozr)]
 
 
-playRoll :: ((Int, Int), (Int, Int), Bool) -> Int -> ((Int, Int), (Int, Int), Bool)
-playRoll ((p1Pos, p1Score), p2Info, True) mv
-  = ((p1Pos'', p1Score + p1Pos''), p2Info, False)
+validBox :: Box -> Bool
+validBox ((xl, xu), (yl, yu), (zl, zu))
+  = xl <= xu && yl <= yu && zl <= zu
+
+
+outerRanges :: (Int, Int) -> (Int, Int) -> ((Int, Int), (Int, Int))
+outerRanges (outerL, outerU) (innerL, innerU)
+  = ((outerL, innerL - 1), (innerU + 1, outerU))
+
+
+rangeIntersect :: (Int, Int) -> (Int, Int) -> (Int, Int)
+rangeIntersect (lb, ub) (lb', ub')
+  = (max lb lb', min ub ub')
+
+
+boxesOverlap :: Box -> Box -> Bool
+boxesOverlap ((xl, xu), (yl, yu), (zl, zu)) ((xl', xu'), (yl', yu'), (zl', zu'))
+  = not (xOut || yOut || zOut)
   where
-    p1Pos'  = p1Pos + mv
-    p1Pos'' = if p1Pos' > 10 then p1Pos' - 10 else p1Pos'
-playRoll (p1Info, (p2Pos, p2Score), False) mv
-  = (p1Info, (p2Pos'', p2Score + p2Pos''), True)
-  where
-    p2Pos'  = p2Pos + mv
-    p2Pos'' = if p2Pos' > 10 then p2Pos' - 10 else p2Pos'
+    xOut = xl > xu' || xu < xl'
+    yOut = yl > yu' || yu < yl'
+    zOut = zl > zu' || zu < zl'
 
-rollDist ::[(Int, Int)]
-rollDist = [(3, 1), (4, 3), (5, 6), (6, 7), (7, 6), (8, 3), (9, 1)]
 
-possRolls = map fst rollDist
-rollCounts = map snd rollDist
+
 
 toRange :: String -> (Int, Int)
 toRange xs
@@ -181,6 +200,27 @@ addToElem xs i c
 
 testInput1 :: String
 testInput1 = unlines [
- "Player 1 starting position: 4",
- "Player 2 starting position: 8"]
+ "on x=-20..26,y=-36..17,z=-47..7",
+ "on x=-20..33,y=-21..23,z=-26..28",
+ "on x=-22..28,y=-29..23,z=-38..16",
+ "on x=-46..7,y=-6..46,z=-50..-1",
+ "on x=-49..1,y=-3..46,z=-24..28",
+ "on x=2..47,y=-22..22,z=-23..27",
+ "on x=-27..23,y=-28..26,z=-21..29",
+ "on x=-39..5,y=-6..47,z=-3..44",
+ "on x=-30..21,y=-8..43,z=-13..34",
+ "on x=-22..26,y=-27..20,z=-29..19",
+ "off x=-48..-32,y=26..41,z=-47..-37",
+ "on x=-12..35,y=6..50,z=-50..-2",
+ "off x=-48..-32,y=-32..-16,z=-15..-5",
+ "on x=-18..26,y=-33..15,z=-7..46",
+ "off x=-40..-22,y=-38..-28,z=23..41",
+ "on x=-16..35,y=-41..10,z=-47..6",
+ "off x=-32..-23,y=11..30,z=-14..3",
+ "on x=-49..-5,y=-3..45,z=-29..18",
+ "off x=18..30,y=-20..-8,z=-3..13",
+ "on x=-41..9,y=-7..43,z=-33..15",
+ "on x=-54112..-39298,y=-85059..-49293,z=-27449..7877",
+ "on x=967..23432,y=45373..81175,z=27513..53682"]
+
 testData1 = convert testInput1

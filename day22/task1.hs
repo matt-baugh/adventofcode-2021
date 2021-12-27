@@ -10,43 +10,85 @@ realResult = do
         return $ (solve . convert) allContents
 
 
-convert :: String -> [(Int, (Int, Int), (Int, Int), (Int, Int))]
+convert :: String -> [(Int, Box)]
 convert xs
   = mapMaybe readCommand $ lines xs
   where
     minC = -50
     maxC = 50
-    readCommand :: String -> Maybe (Int, (Int, Int), (Int, Int), (Int, Int))
+    readCommand :: String -> Maybe (Int, Box)
     readCommand c
       | outOfBounds  = Nothing
-      | val == "on"  = Just (1, xr, yr, zr)
-      | val == "off" = Just (0, xr, yr, zr)
+      | val == "on"  = Just (1, (xr, yr, zr))
+      | val == "off" = Just (0, (xr, yr, zr))
       where
-        [val, rsStrs] = words c
-        rs            = map (toRange . (drop 2)) $ splitOn ',' rsStrs
-        outOfBounds   = any (\(lb, ub) -> lb > maxC || ub < minC) rs
-        [xr, yr, zr]  = map (\(lb, ub) -> (50 + max lb minC, 50 + min ub maxC)) rs
+        [val, rsStrs]   = words c
+        rs@[xr, yr, zr] = map (toRange . (drop 2)) $ splitOn ',' rsStrs
+        outOfBounds     = any (\(lb, ub) -> lb > maxC || ub < minC) rs
 
 
-solve :: [(Int, (Int, Int), (Int, Int), (Int, Int))] -> Int
+solve :: [(Int, Box)] -> Int
 solve xs
-  = sum $ concat $ concat finalGrid
+  = sum $ map (\(xr, yr, zr) -> product $ map rangeLen [xr, yr, zr]) finalCubes
   where
-    initGrid  = replicate 101 $ replicate 101 $ replicate 101 0
-    finalGrid = foldl setCubes initGrid xs
+    finalCubes = foldl setCubes [] xs
+    rangeLen :: (Int, Int) -> Int
+    rangeLen (lb, ub)
+      = ub - lb + 1
 
 
-setCubes :: [[[Int]]] -> (Int, (Int, Int), (Int, Int), (Int, Int)) -> [[[Int]]]
-setCubes grid (v, (xLb, xUb), (yLb, yUb), (zLb, zUb))
-  = zs1 ++ zs2' ++ zs3
+setCubes :: [Box] -> (Int, Box) -> [Box]
+setCubes bs (v, b)
+  | v == 0 = concatMap (`subtractBox` b) bs
+  | v == 1 = excess ++ bs
   where
-    (zs1, zs2, zs3)    = splitBetween zLb zUb grid
-    (zys1, zys2, zys3) = unzip3 $ map (splitBetween yLb yUb) zs2
-    zys2'              = map (map (splitBetween xLb xUb)) zys2
-    zys2''             = map (map (\(xs1, xs2, xs3) -> xs1 ++ (replicate (length xs2) v) ++ xs3)) zys2'
-    zs2'               = map (\(ys1, ys2, ys3) -> ys1 ++ ys2 ++ ys3) $ zip3 zys1 zys2'' zys3
- 
- 
+    excess = foldl (\curr b' -> concatMap (`subtractBox` b') curr) [b] bs
+
+
+type Box = ((Int, Int), (Int, Int), (Int, Int))
+
+
+-- subtract b1 from b2
+subtractBox :: Box -> Box -> [Box]
+subtractBox b1@(xr@(xl, xu), yr@(yl, yu), zr@(zl, zu)) b2@(xr', yr', zr')
+  | not $ boxesOverlap b1 b2 = [b1]
+  | overlap == b1            = []
+  | otherwise                = filter validBox $ res1 ++ res2 ++ res3
+  where
+    overlap = (rangeIntersect xr xr', rangeIntersect yr yr', rangeIntersect zr zr')
+    (oxr@(oxl, oxu), oyr@(oyl, oyu), ozr@(ozl, ozu)) = overlap
+    (bzr, azr) = outerRanges zr ozr
+    res1       = [(xr, yr, bzr), (xr, yr, azr)]
+    (byr, ayr) = outerRanges yr oyr
+    res2       = [(xr, byr, ozr), (xr, ayr, ozr)]
+    (bxr, axr) = outerRanges xr oxr
+    res3       = [(bxr, oyr, ozr), (axr, oyr, ozr)]
+
+
+validBox :: Box -> Bool
+validBox ((xl, xu), (yl, yu), (zl, zu))
+  = xl <= xu && yl <= yu && zl <= zu
+
+
+outerRanges :: (Int, Int) -> (Int, Int) -> ((Int, Int), (Int, Int))
+outerRanges (outerL, outerU) (innerL, innerU)
+  = ((outerL, innerL - 1), (innerU + 1, outerU))
+
+
+rangeIntersect :: (Int, Int) -> (Int, Int) -> (Int, Int)
+rangeIntersect (lb, ub) (lb', ub')
+  = (max lb lb', min ub ub')
+
+
+boxesOverlap :: Box -> Box -> Bool
+boxesOverlap ((xl, xu), (yl, yu), (zl, zu)) ((xl', xu'), (yl', yu'), (zl', zu'))
+  = not (xOut || yOut || zOut)
+  where
+    xOut = xl > xu' || xu < xl'
+    yOut = yl > yu' || yu < yl'
+    zOut = zl > zu' || zu < zl'
+
+
 
 
 toRange :: String -> (Int, Int)
