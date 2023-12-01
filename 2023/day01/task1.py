@@ -18,4 +18,5 @@ def sum_first_and_last(filename: str, number_finder: callable):
     return total
 
 if __name__ == "__main__":
-    print(sum_first_and_last("test_data1.txt", find_numbers))
+    print(sum_first_and_last("data1_test.txt", find_numbers))
+    print(sum_first_and_last("data1_real.txt", find_numbers))
