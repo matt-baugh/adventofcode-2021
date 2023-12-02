@@ -1,0 +1,46 @@
+from pathlib import Path
+
+from utils.file_utils import load_file
+
+
+def check_games(filename: str, blue_max: int = 14,
+                red_max: int = 12, green_max: int = 13):
+    total = 0
+
+    for line in load_file(Path(__file__).parent / filename):
+        game_descr, hands = line.split(":")
+
+        _, game_id = game_descr.split(" ")
+        game_id = int(game_id)
+
+        possible = True
+        for hand in hands.split(';'):
+
+            for group in hand.split(","):
+                sects = group.split(" ")
+
+                assert sects[1].isdigit()
+                num = int(sects[1])
+                colour = sects[2]
+
+                assert colour in ["blue", "red", "green"], 'Invalid colour: {}'
+
+                if colour == "blue" and num > blue_max:
+                    possible = False
+                    break
+                elif colour == "red" and num > red_max:
+                    possible = False
+                    break
+                elif colour == "green" and num > green_max:
+                    possible = False
+                    break
+
+        if possible:
+            total += game_id
+
+    return total
+
+
+if __name__ == "__main__":
+    print(check_games("data1_test.txt"))
+    print(check_games("data1_real.txt"))
