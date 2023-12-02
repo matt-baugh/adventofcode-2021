@@ -20,7 +20,7 @@ def find_all_numbers(line: str):
     nums = []
     num_str = [f'|(?=({k}))' for k in str_to_number.keys()]
     for i in re.findall(r"(\d)" + ''.join(num_str), line):
-        
+
         real_res = [j for j in list(i) if j != ''][0]
 
         if real_res.isdigit():
