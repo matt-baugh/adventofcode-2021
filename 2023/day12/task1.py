@@ -6,6 +6,7 @@ from utils.file_utils import parse_file_lines
 
 PRINT = False
 
+
 def find_groups(s_arrangement: str) -> list[int]:
     s_groups = []
     s_groups_starts = []
@@ -27,7 +28,16 @@ def find_groups(s_arrangement: str) -> list[int]:
     return s_groups, s_groups_starts
 
 
+MEMO_CACHE = {}
+
+
 def calc_combinations(s_arrangement: str, s_groups: list[int]) -> int:
+
+    groups_as_str = ','.join(map(str, s_groups))
+    curr_key = (s_arrangement, groups_as_str)
+    if curr_key in MEMO_CACHE:
+        return MEMO_CACHE[curr_key]
+
     optional_spr_i = s_arrangement.find('?')
     assert optional_spr_i != -1
 
@@ -61,7 +71,8 @@ def calc_combinations(s_arrangement: str, s_groups: list[int]) -> int:
                 if arr_prefix_groups[-1] > s_groups[num_found_groups-1]:
                     continue
 
-                comb_sum += calc_combinations(poss_comb[arr_prefix_groups_starts[-1]:], s_groups[num_found_groups-1:])
+                comb_sum += calc_combinations(
+                    poss_comb[arr_prefix_groups_starts[-1]:], s_groups[num_found_groups-1:])
             else:
                 # arr_prefix[-1] == '.'
                 if arr_prefix_groups[-1] != s_groups[num_found_groups-1]:
@@ -73,6 +84,7 @@ def calc_combinations(s_arrangement: str, s_groups: list[int]) -> int:
         else:
             comb_sum += calc_combinations(poss_comb[next_opt_spr:], s_groups)
 
+    MEMO_CACHE[curr_key] = comb_sum
     return comb_sum
 
 
@@ -101,3 +113,7 @@ if __name__ == "__main__":
     real_sol = sum_possible_arrangements("data1_real.txt", 1)
     print(real_sol)
     assert real_sol == 6935
+    test_sol = sum_possible_arrangements("data1_test.txt", 5)
+    print(test_sol)
+    assert test_sol == 525152
+    print(sum_possible_arrangements("data1_real.txt", 5))
