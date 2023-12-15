@@ -112,14 +112,14 @@ def calc_north_load(filename: str, cycles: int) -> int:
         for d in range(4):
             round_rocks = tilt_rocks(
                 round_rocks, cube_rocks, d, num_rows, num_cols)
-        
+
         rock_map = gen_rock_grid(round_rocks, cube_rocks, num_rows, num_cols)
-        
+
         if PRINT and c < 3:
             print()
             print(rock_map)
             print()
-            
+
         if rock_map in rock_record:
             print(f"Found cycle at {c}! (prev {rock_record[rock_map]}))")
             break
@@ -130,7 +130,8 @@ def calc_north_load(filename: str, cycles: int) -> int:
     cycle_start = rock_record[rock_map]
     cycle_end = c
     cycle_len = cycle_end - cycle_start
-    round_rocks = map_record[cycle_start + ((cycles - 1) - cycle_start) % cycle_len]
+    round_rocks = map_record[cycle_start +
+                             ((cycles - 1) - cycle_start) % cycle_len]
 
     total = sum([num_rows - c_i for c_i, _ in round_rocks])
 
