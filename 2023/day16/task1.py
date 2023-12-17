@@ -58,17 +58,20 @@ def calc_energy(filename: str) -> int:
 
     return calc_energy_from(((0, 0), EAST), all_mirrors, input_shape)
 
+
 def calc_energy_from(initial_beam, all_mirrors, input_shape):
-    
+
     energised_map = [[False] * input_shape[1] for _ in range(input_shape[0])]
     assert sum(sum(row) for row in energised_map) == 0
-        
+
     mirrors_at_start = [m for m in all_mirrors if m[0] == initial_beam[0]]
     if len(mirrors_at_start) > 0:
         assert len(mirrors_at_start) == 1
-        curr_beams = [(initial_beam[0], d) for d in MIRROR_DIR_CHANGE[mirrors_at_start[0][1]][initial_beam[1]]]
-            
-        initial_beam = (initial_beam[0], MIRROR_DIR_CHANGE[mirrors_at_start[0][1]][initial_beam[1]][0])
+        curr_beams = [(initial_beam[0], d)
+                      for d in MIRROR_DIR_CHANGE[mirrors_at_start[0][1]][initial_beam[1]]]
+
+        initial_beam = (
+            initial_beam[0], MIRROR_DIR_CHANGE[mirrors_at_start[0][1]][initial_beam[1]][0])
     else:
         curr_beams = [initial_beam]
     all_beams = set(curr_beams)
@@ -79,14 +82,16 @@ def calc_energy_from(initial_beam, all_mirrors, input_shape):
             axis = 0 if dir in (NORTH, SOUTH) else 1
             if PRINT:
                 print(start_coord, dir, axis)
-            poss_mirrors = [m for m in all_mirrors if m[0][1 - axis] == start_coord[1 - axis]]
+            poss_mirrors = [m for m in all_mirrors if m[0]
+                            [1 - axis] == start_coord[1 - axis]]
             mirror_hit = None
             if dir in (NORTH, WEST):
                 poss_mirrors = [m for m in poss_mirrors if m[0]
                                 [axis] < start_coord[axis]]
 
                 if len(poss_mirrors) == 0:
-                    end = tuple(-1 if i == axis else start_coord[i] for i in range(2))
+                    end = tuple(-1 if i ==
+                                axis else start_coord[i] for i in range(2))
                 else:
                     mirror_hit = max(
                         poss_mirrors, key=lambda m: m[0][axis])
@@ -102,14 +107,12 @@ def calc_energy_from(initial_beam, all_mirrors, input_shape):
                     mirror_hit = min(
                         poss_mirrors, key=lambda m: m[0][axis])
                     end = mirror_hit[0]
-                    
-                    # TODO: correct up to here
 
             assert end != start_coord, (start_coord, dir, poss_mirrors)
             step = 1 if end > start_coord else -1
             for a_i in range(start_coord[axis], end[axis], step):
                 a = tuple(a_i if i ==
-                     axis else start_coord[1 - axis] for i in range(2))
+                          axis else start_coord[1 - axis] for i in range(2))
                 energised_map[a[0]][a[1]] = True
 
             if mirror_hit is not None:
