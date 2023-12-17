@@ -1,11 +1,8 @@
 from pathlib import Path
 
-from tqdm import tqdm
-
 from utils.file_utils import load_file
 
 PRINT = False
-
 
 
 def calc_north_load(filename: str) -> int:
@@ -23,18 +20,19 @@ def calc_north_load(filename: str) -> int:
             c = row[col_i]
             if c == '.':
                 continue
-            
+
             if c == '#':
                 curr_cube = row_i
                 cube_dict[curr_cube] = []
-            
+
             if c == 'O':
                 cube_dict[curr_cube].append(row_i)
-                
-        
-        total += sum([sum([(max_load - (c + 1 + r)) for r in range(len(rocks))])for c, rocks in cube_dict.items()])
+
+        total += sum(sum((max_load - (c + 1 + r)) for r in range(len(rocks)))
+                     for c, rocks in cube_dict.items())
 
     return total
+
 
 if __name__ == "__main__":
     test_sol = calc_north_load("data1_test.txt")
