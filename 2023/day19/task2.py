@@ -91,17 +91,9 @@ def calc_num_accepted_combinations(filename: str) -> int:
     overlapping_accepted_ranges = traverse_rules(
         'in', ((1, 4000), (1, 4000), (1, 4000), (1, 4000)))
 
+    # Because we built these ranges from non-overlapping input ranges, we can just sum them
     ranges_sum = sum(reduce(mul, [ub - lb + 1 for lb, ub in range_bounds])
                      for range_bounds in overlapping_accepted_ranges)
-
-    # Need to subtract double counted ranges
-    for i, range1 in enumerate(overlapping_accepted_ranges):
-        for range2 in overlapping_accepted_ranges[i + 1:]:
-            overlap_range = tuple((max(lb1, lb2), min(ub1, ub2))
-                                  for (lb1, ub1), (lb2, ub2) in zip(range1, range2))
-            if all(lb <= ub for lb, ub in overlap_range):
-                ranges_sum -= reduce(mul,
-                                     [ub - lb + 1 for lb, ub in overlap_range])
 
     return ranges_sum
 
@@ -112,4 +104,4 @@ if __name__ == "__main__":
     assert test_sol == 167409079868000
     real_sol = calc_num_accepted_combinations("data1_real.txt")
     print(real_sol)
-    # assert real_sol == 492702
+    assert real_sol == 138616621185978
