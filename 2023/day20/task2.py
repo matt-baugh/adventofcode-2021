@@ -1,15 +1,21 @@
 from abc import ABC, abstractmethod
+from math import lcm
 from pathlib import Path
-from typing import Literal, Optional, Union
-
-from tqdm import tqdm
-
 
 from utils.file_utils import parse_file_lines
 
 PRINT = False
 LOW = 0
 HIGH = 1
+
+
+def level_to_str(level: int) -> str:
+    if level == LOW:
+        return 'Low'
+    elif level == HIGH:
+        return 'High'
+    else:
+        raise ValueError(f'Invalid level: {level}')
 
 
 class Module(ABC):
@@ -64,7 +70,7 @@ class Broadcast(Module):
         return (pulse_level, self.dest_mods)
 
 
-def calc_pulses(filename: str, num_presses: int) -> int:
+def calc_pulses(filename: str, watch: list[str]) -> int:
 
     raw_input = parse_file_lines(Path(__file__).parent / filename, ' -> ')
 
@@ -92,15 +98,31 @@ def calc_pulses(filename: str, num_presses: int) -> int:
         for c_to in conj_modules & set(mod_obj.dest_mods):
             module_map[c_to].add_input_module(mod_name)
 
-    num_high = 0
-    num_low = 0
-    for i in tqdm(range(num_presses)):
+    last_high = {w: None for w in watch}
+    last_high_period = {w: None for w in watch}
+
+    i = 0
+    while True:
         curr_pulses = [(LOW, 'broadcaster', 'button')]
-        num_low += 1
+        i += 1
 
         while len(curr_pulses) > 0:
             new_pulses = []
             for pulse_level, pulse_to, pulse_from in curr_pulses:
+                if pulse_from in watch and pulse_level == HIGH:
+                    from_last_high = last_high[pulse_from]
+                    if from_last_high is not None:
+                        curr_last_high_period = i - from_last_high
+                        if last_high_period[pulse_from] is None:
+                            last_high_period[pulse_from] = curr_last_high_period
+                        else:
+                            assert last_high_period[pulse_from] == curr_last_high_period, \
+                                f'Period changed from {last_high_period[pulse_from]} to {curr_last_high_period}'
+                        last_high_str = f'Last: {curr_last_high_period}'
+                    else:
+                        last_high_str = 'Never'
+                    print(f'{i}: {pulse_from} -> {pulse_to}: {level_to_str(pulse_level)} - {last_high_str}')
+                    last_high[pulse_from] = i
 
                 if pulse_level == LOW and pulse_to == 'rx':
                     print(f'Low pulse from {pulse_from} to {pulse_to} at {i}')
@@ -114,31 +136,34 @@ def calc_pulses(filename: str, num_presses: int) -> int:
                     continue
 
                 pulse_level, pulse_dests = pulse_output
-                if pulse_level == LOW:
-                    num_low += len(pulse_dests)
-                elif pulse_level == HIGH:
-                    num_high += len(pulse_dests)
-                else:
-                    raise ValueError(f'Invalid pulse level: {pulse_level}')
+                # if pulse_level == LOW:
+                #     num_low += len(pulse_dests)
+                # elif pulse_level == HIGH:
+                #     num_high += len(pulse_dests)
+                # else:
+                #     raise ValueError(f'Invalid pulse level: {pulse_level}')
 
                 new_pulses.extend([(pulse_level, pulse_dest, pulse_to)
                                    for pulse_dest in pulse_dests])
 
             curr_pulses = new_pulses
 
-        if PRINT:
-            print(f'After button {i} - Low: {num_low}, High: {num_high}')
-
-    return num_high * num_low
+        if all(last_high_period.values()):
+            print(f'All periods: {last_high_period}')
+            return lcm(*last_high_period.values())
 
 
 if __name__ == "__main__":
-    test_sol = calc_pulses("data1_test.txt", 1000)
-    print(test_sol)
-    assert test_sol == 32000000
-    test_sol2 = calc_pulses("data1_test2.txt", 1000)
-    print(test_sol2)
-    assert test_sol2 == 11687500
-    real_sol = calc_pulses("data1_real.txt", 1000)
+    # rx needs to receive a low pulse
+    # -> &lx must send a low pulse
+    # -> &lx must have all high pulses in memory
+    # -> &cl, &rp, &lb, &nj must have sent high pulses
+    # for &cl to send a high pulse,
+    #   - %rl must have sent a low pulse
+    # &rp high -> &rd low
+    # &lb high -> &qb low
+    # &nj high -> &nn low
+    # &rl, &rd, &qb, &nn must have received
+    real_sol = calc_pulses("data1_real.txt", ['cl', 'rp', 'lb', 'nj'])
     print(real_sol)
     assert real_sol == 794930686
