@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from math import lcm
 from pathlib import Path
+from typing import Optional
 
 from utils.file_utils import parse_file_lines
 
