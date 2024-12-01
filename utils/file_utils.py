@@ -35,8 +35,8 @@ def chunk_input(input_list: list, chunk_separator: Any, skip_empty=False):
             curr_chunk.append(e)
     if curr_chunk or not skip_empty:
         chunks.append(curr_chunk)
-        
+
     if skip_empty:
         chunks = [c for c in chunks if c]
-        
+
     return chunks
