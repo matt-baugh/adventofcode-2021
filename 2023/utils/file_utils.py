@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 
-def load_file(file_path: Path, skip_empty=False):
+def load_file(file_path: Path, skip_empty=False) -> list[str]:
     with open(file_path, "r") as file:
         content = file.readlines()
         if skip_empty:
