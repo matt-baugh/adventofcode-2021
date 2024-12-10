@@ -20,8 +20,6 @@ class Direction(Enum):
     def increasing_coord(self):
         return self == Direction.RIGHT or self == Direction.DOWN
 
-# (8, 2)
-
 
 def construct_map(content: list[str]):
     rowwise_map = {}
